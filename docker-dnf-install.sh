@@ -35,6 +35,12 @@ function retry {
     done
 }
 
+if [ -n "$HTTP_PROXY" ]; then
+    echo "Configuring dnf to use HTTP_PROXY..."
+    cp /etc/dnf/dnf.conf /etc/dnf/dnf.conf.bac
+    echo "proxy=$HTTP_PROXY" >>/etc/dnf/dnf.conf
+fi
+
 echo
 echo "Downloading packages..."
 retry dnf install -y --downloadonly "$@"
@@ -43,7 +49,11 @@ echo
 echo "Installing packages..."
 dnf install -y "$@"
 
-# DO NOT CLEAN UP! WE WANT THE CACHE FOR BUILDING THE ISOs!
-# echo
-# echo "Cleaning up..."
-# true || dnf clean all
+# TODO: make cleaning optional. for the ISO builder image, we want to keep the cache populated
+echo
+echo "Cleaning up..."
+dnf clean all
+
+if [ -e /etc/dnf/dnf.conf.bac ]; then
+    mv /etc/dnf/dnf.conf.bac /etc/dnf/dnf.conf
+fi
